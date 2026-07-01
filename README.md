@@ -1,20 +1,18 @@
 # Valo Toolkit
 
-Valo Toolkit is a lightweight WinForms utility for Valorant display and crosshair setup.
+Valo Toolkit is a lightweight Windows WinForms utility for Valorant display and crosshair setup.
 
 ## Features
 
-- Switch common 4:3 resolutions quickly.
+- Switch common 4:3 resolutions.
 - Reset to the best native 16:9 resolution available on the current display.
-- Toggle monitor devices when needed for special 4:3 workflows.
+- Toggle monitor devices for special 4:3 workflows.
 - Open NVIDIA Control Panel for custom resolution setup.
-- Copy preset Valorant crosshair codes.
+- Copy built-in Valorant crosshair codes.
 - Open the VCRDB crosshair website.
-- Dark, compact WinForms interface with no web UI or heavy UI framework.
+- Dark, compact UI built with WinForms.
 
-## Included Presets
-
-### Resolutions
+## Included Resolution Presets
 
 - 1568 x 1080
 - 1280 x 882
@@ -22,12 +20,12 @@ Valo Toolkit is a lightweight WinForms utility for Valorant display and crosshai
 - 1280 x 960
 - 1280 x 1024
 
-### Crosshairs
+## Included Crosshair Presets
 
-- 经典十字
-- 经典红点
-- 空心十字
-- 扁平准星
+- Classic Cross
+- Classic Red Dot
+- Hollow Cross
+- Flat Crosshair
 
 ## Build
 
@@ -50,3 +48,4 @@ C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /
 - Windows only.
 - Some monitor operations require administrator permission.
 - NVIDIA custom resolutions must still be created manually in NVIDIA Control Panel or NVIDIA App.
+- No WPF, Electron, Avalonia, MAUI, WebView, or HTML UI is used.
