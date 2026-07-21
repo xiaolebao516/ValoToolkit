@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Management;
+using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Windows.Forms;
@@ -29,6 +30,16 @@ namespace ValorantResolutionAssistant
                 RunMonitorAction(false);
                 return;
             }
+            if (args.Length == 1 && args[0] == "--disable-memory-integrity")
+            {
+                RunMemoryIntegrityAction();
+                return;
+            }
+            if (args.Length == 1 && args[0] == "--optimize-ace")
+            {
+                RunAceOptimizationAction();
+                return;
+            }
 
             Application.Run(new MainForm());
         }
@@ -44,6 +55,43 @@ namespace ValorantResolutionAssistant
                 }
 
                 MessageBox.Show(MonitorDeviceManager.SetEnabled(enable), Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static void RunMemoryIntegrityAction()
+        {
+            try
+            {
+                if (!AdminHelper.IsAdministrator())
+                {
+                    MessageBox.Show(Texts.AdminRequired, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MemoryIntegrityManager.Disable();
+                MessageBox.Show(Texts.MemoryIntegrityDone, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static void RunAceOptimizationAction()
+        {
+            try
+            {
+                if (!AdminHelper.IsAdministrator())
+                {
+                    MessageBox.Show(Texts.AdminRequired, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                MessageBox.Show(ValorantOptimization.OptimizeAceProcesses(), Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -69,6 +117,14 @@ namespace ValorantResolutionAssistant
         public const string MonitorEnabled = "\u76d1\u89c6\u5668\u8bbe\u5907\u5df2\u542f\u7528\u3002";
         public const string MonitorDisabled = "\u76d1\u89c6\u5668\u8bbe\u5907\u5df2\u7981\u7528\u3002";
         public const string SpecialHint = "\u9700\u5148\u5728 NVIDIA \u63a7\u5236\u9762\u677f\u91cc\u521b\u5efa\u81ea\u5b9a\u4e49\u5206\u8fa8\u7387";
+        public const string MemoryIntegrityDone = "\u5df2\u5199\u5165\u5185\u6838\u9694\u79bb\u8bbe\u7f6e\u3002\r\n\r\n\u8bf7\u91cd\u65b0\u542f\u52a8 Windows \u540e\u68c0\u67e5\u8bbe\u7f6e\u662f\u5426\u751f\u6548\u3002";
+        public const string MemoryIntegrityConfirm = "\u5173\u95ed\u5185\u6838\u9694\u79bb\uff08\u5185\u5b58\u5b8c\u6574\u6027\uff09\u4f1a\u964d\u4f4e Windows \u7684\u5185\u6838\u4fdd\u62a4\u80fd\u529b\uff0c\u5e76\u53ef\u80fd\u9700\u8981\u91cd\u542f\u3002\r\n\r\n\u786e\u5b9a\u8981\u7ee7\u7eed\u5417\uff1f";
+        public const string DxCacheConfirm = "\u786e\u5b9a\u8981\u5220\u9664\u4ee5\u4e0b NVIDIA DXCache \u6587\u4ef6\u5939\u5417\uff1f\r\n\r\n";
+        public const string AceOptimizationDone = "\u5df2\u5904\u7406 ACE \u8fdb\u7a0b\uff1a";
+        public const string AceOptimizationNone = "\u5f53\u524d\u672a\u627e\u5230 SGuard64.exe \u6216 SGuardSvc64.exe\u3002\r\n\r\n\u8bf7\u5148\u542f\u52a8\u65e0\u754f\u5951\u7ea6\u540e\u518d\u6267\u884c\u3002";
+        public const string Optimization = "\u4f18\u5316";
+        public const string OptimizationTitle = "\u4e00\u952e\u4f18\u5316";
+        public const string OptimizationSubtitle = "\u9488\u5bf9\u65e0\u754f\u5951\u7ea6\u7684\u5e38\u7528\u8bbe\u7f6e";
         public const string HelpText =
             "\u7279\u6b8a 4:3\uff1a\u7981\u7528\u76d1\u89c6\u5668\u540e\uff0c\u5728\u6e38\u620f\u5185\u9009\u201c\u5168\u5c4f\u7a97\u53e3 + \u586b\u5145\u201d\uff0c\u518d\u9009\u7279\u6b8a\u5206\u8fa8\u7387\uff0c\u901a\u5e38\u4e00\u6b21\u8bbe\u7f6e\u53ef\u957f\u671f\u4f7f\u7528\u3002\r\n\r\n" +
             "\u5e38\u89c4 4:3\uff1a\u505a\u6cd5\u540c\u4e0a\uff0c\u4f46\u6bcf\u6b21\u91cd\u65b0\u8fdb\u5165\u5bf9\u5c40\u540e\uff0c\u901a\u5e38\u9700\u8981\u5148\u70b9 reset \u5207\u56de\u539f\u6bd4\u4f8b\uff0c\u518d\u70b9\u5bf9\u5e94 4:3\u3002\r\n\r\n" +
@@ -102,9 +158,11 @@ namespace ValorantResolutionAssistant
         private Label statusLabel;
         private readonly Panel resolutionPage;
         private readonly Panel crosshairPage;
+        private readonly Panel optimizationPage;
         private readonly Panel helpPage;
         private readonly NavButton resolutionNav;
         private readonly NavButton crosshairNav;
+        private readonly NavButton optimizationNav;
         private readonly NavButton helpNav;
         private PillButton copiedButton;
         private Timer copiedTimer;
@@ -216,11 +274,22 @@ namespace ValorantResolutionAssistant
             crosshairNav.Click += delegate { ShowPage(crosshairPage, crosshairNav); };
             sidebar.Controls.Add(crosshairNav);
 
+            optimizationNav = new NavButton
+            {
+                Text = Texts.Optimization,
+                Symbol = "!",
+                Location = new Point(12, 258),
+                Size = new Size(150, 54),
+                Font = navFont
+            };
+            optimizationNav.Click += delegate { ShowPage(optimizationPage, optimizationNav); };
+            sidebar.Controls.Add(optimizationNav);
+
             helpNav = new NavButton
             {
                 Text = "\u5e2e\u52a9",
                 Symbol = "?",
-                Location = new Point(12, 258),
+                Location = new Point(12, 328),
                 Size = new Size(150, 54),
                 Font = navFont
             };
@@ -229,13 +298,16 @@ namespace ValorantResolutionAssistant
 
             resolutionPage = MakePage();
             crosshairPage = MakePage();
+            optimizationPage = MakePage();
             helpPage = MakePage();
             Controls.Add(resolutionPage);
             Controls.Add(crosshairPage);
+            Controls.Add(optimizationPage);
             Controls.Add(helpPage);
 
             BuildResolutionPage();
             BuildCrosshairPage();
+            BuildOptimizationPage();
             BuildHelpPage();
             ShowPage(resolutionPage, resolutionNav);
         }
@@ -257,6 +329,13 @@ namespace ValorantResolutionAssistant
             if (System.IO.File.Exists(iconPath))
             {
                 Icon = new Icon(iconPath);
+                return;
+            }
+
+            var executableIcon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            if (executableIcon != null)
+            {
+                Icon = executableIcon;
             }
         }
 
@@ -281,12 +360,15 @@ namespace ValorantResolutionAssistant
         {
             resolutionPage.Visible = page == resolutionPage;
             crosshairPage.Visible = page == crosshairPage;
+            optimizationPage.Visible = page == optimizationPage;
             helpPage.Visible = page == helpPage;
             resolutionNav.Active = activeNav == resolutionNav;
             crosshairNav.Active = activeNav == crosshairNav;
+            optimizationNav.Active = activeNav == optimizationNav;
             helpNav.Active = activeNav == helpNav;
             resolutionNav.Invalidate();
             crosshairNav.Invalidate();
+            optimizationNav.Invalidate();
             helpNav.Invalidate();
         }
 
@@ -424,6 +506,86 @@ namespace ValorantResolutionAssistant
             moreCard.Controls.Add(openWebsite);
         }
 
+        private void BuildOptimizationPage()
+        {
+            optimizationPage.Controls.Add(new Label
+            {
+                Text = Texts.OptimizationTitle,
+                Font = pageTitleFont,
+                ForeColor = Theme.PrimaryText,
+                BackColor = Theme.Background,
+                Location = new Point(42, 30),
+                Size = new Size(260, 48)
+            });
+
+            optimizationPage.Controls.Add(new Label
+            {
+                Text = Texts.OptimizationSubtitle,
+                ForeColor = Theme.SecondaryText,
+                BackColor = Theme.Background,
+                Font = new Font("Microsoft YaHei UI", 13f, FontStyle.Regular),
+                Location = new Point(45, 78),
+                Size = new Size(360, 28)
+            });
+
+            AddOptimizationCard(
+                "ACE \u8fdb\u7a0b",
+                "SGuard64 / SGuardSvc64 \u8bbe\u4e3a\u4f4e\u4f18\u5148\u7ea7\uff0c\u4ec5\u4f7f\u7528\u6700\u540e\u4e00\u4e2a CPU",
+                "\u8bbe\u7f6e ACE",
+                124,
+                delegate { OptimizeAceProcesses(); });
+            AddOptimizationCard(
+                "\u5185\u6838\u9694\u79bb",
+                "\u5173\u95ed\u5185\u5b58\u5b8c\u6574\u6027\uff0c\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650\u548c\u91cd\u542f",
+                "\u5173\u95ed\u5185\u6838\u9694\u79bb",
+                208,
+                delegate { DisableMemoryIntegrity(); });
+            AddOptimizationCard(
+                "ACLOS \u542f\u52a8\u5668",
+                "\u81ea\u52a8\u67e5\u627e WeGameApps \u4e2d\u7684 aclos-launcher.exe \u5e76\u7981\u7528\u5168\u5c4f\u4f18\u5316",
+                "\u8bbe\u7f6e\u542f\u52a8\u5668",
+                292,
+                delegate { ConfigureAclosLauncher(); });
+            AddOptimizationCard(
+                "NVIDIA DXCache",
+                "\u5220\u9664\u7528\u6237 LocalLow\\NVIDIA\\DXCache \u7f13\u5b58\u6587\u4ef6\u5939",
+                "\u6e05\u7406 DXCache",
+                376,
+                delegate { ClearDxCache(); });
+        }
+
+        private void AddOptimizationCard(string title, string description, string buttonText, int top, EventHandler handler)
+        {
+            var card = new SoftPanel
+            {
+                Location = new Point(42, top),
+                Size = new Size(504, 72),
+                Radius = 14
+            };
+            optimizationPage.Controls.Add(card);
+            card.Controls.Add(new Label
+            {
+                Text = title,
+                ForeColor = Theme.PrimaryText,
+                BackColor = Color.Transparent,
+                Font = sectionFont,
+                Location = new Point(18, 10),
+                Size = new Size(300, 24)
+            });
+            card.Controls.Add(new Label
+            {
+                Text = description,
+                ForeColor = Theme.SecondaryText,
+                BackColor = Color.Transparent,
+                Font = smallFont,
+                Location = new Point(18, 37),
+                Size = new Size(304, 28)
+            });
+            var button = MakeOutlineButton(buttonText, 334, 18, 150, true);
+            button.Click += handler;
+            card.Controls.Add(button);
+        }
+
         private void BuildHelpPage()
         {
             helpPage.Controls.Add(new Label
@@ -477,7 +639,7 @@ namespace ValorantResolutionAssistant
 
             row.Controls.Add(new CrosshairPreview
             {
-                ImagePath = ResolveCrosshairPath(preset.ImageFileName),
+                PreviewImage = CrosshairImageLoader.Load(preset.ImageFileName),
                 Location = new Point(12, 10),
                 Size = new Size(72, 48)
             });
@@ -617,17 +779,6 @@ namespace ValorantResolutionAssistant
             };
         }
 
-        private string ResolveCrosshairPath(string fileName)
-        {
-            var assetsPath = System.IO.Path.Combine(Application.StartupPath, "Assets", "Crosshairs", fileName);
-            if (System.IO.File.Exists(assetsPath))
-            {
-                return assetsPath;
-            }
-
-            return System.IO.Path.Combine(Application.StartupPath, "docs", "crosshair", fileName);
-        }
-
         private void OpenNvidiaControlPanel()
         {
             if (TryStartProcess("explorer.exe", @"shell:AppsFolder\NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj!NVIDIACorp.NVIDIAControlPanel"))
@@ -678,6 +829,94 @@ namespace ValorantResolutionAssistant
             catch
             {
                 return false;
+            }
+        }
+
+        private void OptimizeAceProcesses()
+        {
+            try
+            {
+                if (!AdminHelper.IsAdministrator())
+                {
+                    Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--optimize-ace")
+                    {
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    });
+                    ShowStatus("\u5df2\u8bf7\u6c42\u7ba1\u7406\u5458\u6743\u9650");
+                    return;
+                }
+
+                var result = ValorantOptimization.OptimizeAceProcesses();
+                MessageBox.Show(this, result, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowStatus(Texts.AceOptimizationDone);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DisableMemoryIntegrity()
+        {
+            if (MessageBox.Show(this, Texts.MemoryIntegrityConfirm, Texts.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                if (AdminHelper.IsAdministrator())
+                {
+                    MemoryIntegrityManager.Disable();
+                    MessageBox.Show(this, Texts.MemoryIntegrityDone, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Process.Start(new ProcessStartInfo(Application.ExecutablePath, "--disable-memory-integrity")
+                {
+                    UseShellExecute = true,
+                    Verb = "runas"
+                });
+                ShowStatus("\u5df2\u8bf7\u6c42\u7ba1\u7406\u5458\u6743\u9650");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ConfigureAclosLauncher()
+        {
+            try
+            {
+                var launcherPath = ValorantOptimization.ConfigureAclosLauncher();
+                MessageBox.Show(this, "\u5df2\u4e3a\u4ee5\u4e0b\u7a0b\u5e8f\u7981\u7528\u5168\u5c4f\u4f18\u5316\uff1a\r\n\r\n" + launcherPath, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowStatus("ACLOS \u542f\u52a8\u5668\u5df2\u8bbe\u7f6e");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ClearDxCache()
+        {
+            var cachePath = ValorantOptimization.GetDxCachePath();
+            if (MessageBox.Show(this, Texts.DxCacheConfirm + cachePath, Texts.AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            {
+                return;
+            }
+
+            try
+            {
+                var result = ValorantOptimization.ClearDxCache();
+                MessageBox.Show(this, result, Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowStatus("DXCache \u5df2\u5904\u7406");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -857,23 +1096,17 @@ namespace ValorantResolutionAssistant
     internal sealed class CrosshairPreview : Control
     {
         private Image previewImage;
-        private string imagePath;
 
-        public string ImagePath
+        public Image PreviewImage
         {
-            get { return imagePath; }
             set
             {
-                imagePath = value;
                 if (previewImage != null)
                 {
                     previewImage.Dispose();
                     previewImage = null;
                 }
-                if (!string.IsNullOrEmpty(imagePath) && System.IO.File.Exists(imagePath))
-                {
-                    previewImage = Image.FromFile(imagePath);
-                }
+                previewImage = value;
                 Invalidate();
             }
         }
@@ -917,6 +1150,33 @@ namespace ValorantResolutionAssistant
                 previewImage = null;
             }
             base.Dispose(disposing);
+        }
+    }
+
+    internal static class CrosshairImageLoader
+    {
+        private const string ResourcePrefix = "ValorantResolutionAssistant.Assets.Crosshairs.";
+
+        public static Image Load(string fileName)
+        {
+            var assetsPath = System.IO.Path.Combine(Application.StartupPath, "Assets", "Crosshairs", fileName);
+            if (System.IO.File.Exists(assetsPath))
+            {
+                return Image.FromFile(assetsPath);
+            }
+
+            using (var stream = typeof(CrosshairImageLoader).Assembly.GetManifestResourceStream(ResourcePrefix + fileName))
+            {
+                if (stream == null)
+                {
+                    return null;
+                }
+
+                using (var image = Image.FromStream(stream))
+                {
+                    return new Bitmap(image);
+                }
+            }
         }
     }
 
@@ -1212,6 +1472,163 @@ namespace ValorantResolutionAssistant
             using (var identity = WindowsIdentity.GetCurrent())
             {
                 return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+            }
+        }
+    }
+
+    internal static class ValorantOptimization
+    {
+        private static readonly string[] AceProcessNames = { "SGuard64", "SGuardSvc64" };
+
+        public static string OptimizeAceProcesses()
+        {
+            var processorCount = Environment.ProcessorCount;
+            var lastProcessor = processorCount - 1;
+            if (lastProcessor < 0 || lastProcessor >= IntPtr.Size * 8)
+            {
+                throw new InvalidOperationException("\u5f53\u524d\u5904\u7406\u5668\u6570\u91cf\u8d85\u51fa\u53ef\u8bbe\u7f6e\u7684\u8303\u56f4\u3002");
+            }
+
+            var mask = IntPtr.Size == 8
+                ? new IntPtr(1L << lastProcessor)
+                : new IntPtr(1 << lastProcessor);
+            var results = new List<string>();
+            var found = 0;
+
+            foreach (var processName in AceProcessNames)
+            {
+                var processes = Process.GetProcessesByName(processName);
+                foreach (var process in processes)
+                {
+                    using (process)
+                    {
+                        found++;
+                        try
+                        {
+                            process.ProcessorAffinity = mask;
+                            if (process.ProcessorAffinity != mask)
+                            {
+                                throw new InvalidOperationException("\u5904\u7406\u5668\u5173\u8054\u6027\u672a\u80fd\u5199\u5165\u76ee\u6807 CPU " + lastProcessor + "\u3002");
+                            }
+
+                            process.PriorityClass = ProcessPriorityClass.BelowNormal;
+                            results.Add(process.ProcessName + " (PID " + process.Id + ") \u5df2\u7ed1\u5b9a CPU " + lastProcessor);
+                        }
+                        catch (Exception ex)
+                        {
+                            results.Add(processName + " (PID " + process.Id + ") \u5931\u8d25\uff1a" + ex.Message);
+                        }
+                    }
+                }
+            }
+
+            if (found == 0)
+            {
+                return Texts.AceOptimizationNone;
+            }
+
+            return Texts.AceOptimizationDone + Environment.NewLine + string.Join(Environment.NewLine, results.ToArray());
+        }
+
+        public static string ConfigureAclosLauncher()
+        {
+            var launcherPath = FindAclosLauncher();
+            if (launcherPath == null)
+            {
+                throw new System.IO.FileNotFoundException("\u672a\u5728\u5404\u78c1\u76d8\u7684 WeGameApps\\rail_apps \u4e2d\u627e\u5230 aclos-launcher.exe\u3002");
+            }
+
+            using (var layers = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"))
+            {
+                if (layers == null)
+                {
+                    throw new InvalidOperationException("\u65e0\u6cd5\u6253\u5f00 Windows \u5e94\u7528\u517c\u5bb9\u6027\u8bbe\u7f6e\u3002");
+                }
+
+                var current = Convert.ToString(layers.GetValue(launcherPath, ""));
+                if (current.IndexOf("DISABLEDXMAXIMIZEDWINDOWEDMODE", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    current = string.IsNullOrWhiteSpace(current)
+                        ? "~ DISABLEDXMAXIMIZEDWINDOWEDMODE"
+                        : current + " DISABLEDXMAXIMIZEDWINDOWEDMODE";
+                    layers.SetValue(launcherPath, current, RegistryValueKind.String);
+                }
+            }
+
+            return launcherPath;
+        }
+
+        private static string FindAclosLauncher()
+        {
+            foreach (var drive in System.IO.DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady || drive.DriveType != System.IO.DriveType.Fixed)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    var railAppsPath = System.IO.Path.Combine(drive.RootDirectory.FullName, "WeGameApps", "rail_apps");
+                    if (!System.IO.Directory.Exists(railAppsPath))
+                    {
+                        continue;
+                    }
+
+                    foreach (var gamePath in System.IO.Directory.GetDirectories(railAppsPath))
+                    {
+                        var launcherPath = System.IO.Path.Combine(gamePath, "ACLOS", "aclos-launcher.exe");
+                        if (System.IO.File.Exists(launcherPath))
+                        {
+                            return launcherPath;
+                        }
+                    }
+                }
+                catch (System.IO.IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
+
+            return null;
+        }
+
+        public static string GetDxCachePath()
+        {
+            return System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "AppData", "LocalLow", "NVIDIA", "DXCache");
+        }
+
+        public static string ClearDxCache()
+        {
+            var cachePath = GetDxCachePath();
+            if (!System.IO.Directory.Exists(cachePath))
+            {
+                return "\u672a\u627e\u5230 DXCache\uff0c\u65e0\u9700\u6e05\u7406\u3002";
+            }
+
+            System.IO.Directory.Delete(cachePath, true);
+            return "\u5df2\u5220\u9664 DXCache\uff1a\r\n" + cachePath;
+        }
+    }
+
+    internal static class MemoryIntegrityManager
+    {
+        private const string RegistryPath = @"SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity";
+
+        public static void Disable()
+        {
+            using (var key = Registry.LocalMachine.CreateSubKey(RegistryPath))
+            {
+                if (key == null)
+                {
+                    throw new InvalidOperationException("\u65e0\u6cd5\u8bbf\u95ee Windows \u5185\u6838\u9694\u79bb\u8bbe\u7f6e\u3002");
+                }
+
+                key.SetValue("Enabled", 0, RegistryValueKind.DWord);
             }
         }
     }
