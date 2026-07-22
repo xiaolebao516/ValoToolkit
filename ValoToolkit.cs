@@ -164,6 +164,9 @@ namespace ValorantResolutionAssistant
         private readonly NavButton crosshairNav;
         private readonly NavButton optimizationNav;
         private readonly NavButton helpNav;
+        private ToggleSwitch resolutionToggle;
+        private ResolutionTarget selectedCommonResolution;
+        private readonly List<PillButton> commonResolutionButtons = new List<PillButton>();
         private PillButton copiedButton;
         private Timer copiedTimer;
         private string copiedOriginalText;
@@ -181,6 +184,7 @@ namespace ValorantResolutionAssistant
             BackColor = Theme.Background;
             Font = uiFont;
             LoadAppIcon();
+            selectedCommonResolution = AppSettings.LoadCommonResolution();
 
             var titleBar = new Panel
             {
@@ -247,9 +251,43 @@ namespace ValorantResolutionAssistant
                 ForeColor = Theme.PrimaryText,
                 BackColor = Theme.Sidebar,
                 Location = new Point(20, 34),
-                Size = new Size(140, 36),
+                Size = new Size(46, 36),
                 TextAlign = ContentAlignment.MiddleLeft
             });
+
+            var launcherButton = new PillButton
+            {
+                Text = "启动器",
+                Location = new Point(72, 30),
+                Size = new Size(90, 40),
+                FillColor = Theme.ButtonBackground,
+                BorderColor = Theme.ButtonBorder,
+                TextColor = Theme.PrimaryText,
+                Radius = 8,
+                Font = uiFont
+            };
+            launcherButton.Click += delegate { LaunchAclosLauncher(); };
+            sidebar.Controls.Add(launcherButton);
+
+            sidebar.Controls.Add(new Label
+            {
+                Text = "分辨率切换",
+                ForeColor = Theme.PrimaryText,
+                BackColor = Theme.Sidebar,
+                Font = uiFont,
+                Location = new Point(20, 78),
+                Size = new Size(96, 26),
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+
+            resolutionToggle = new ToggleSwitch
+            {
+                Location = new Point(119, 79),
+                Size = new Size(43, 24),
+                Checked = false
+            };
+            resolutionToggle.Click += delegate { ToggleResolutionMode(); };
+            sidebar.Controls.Add(resolutionToggle);
 
             resolutionNav = new NavButton
             {
@@ -309,6 +347,7 @@ namespace ValorantResolutionAssistant
             BuildCrosshairPage();
             BuildOptimizationPage();
             BuildHelpPage();
+            resolutionToggle.SetChecked(IsCurrentResolution(selectedCommonResolution), false);
             ShowPage(resolutionPage, resolutionNav);
         }
 
@@ -404,8 +443,8 @@ namespace ValorantResolutionAssistant
             resolutionPage.Controls.Add(specialCard);
 
             specialCard.Controls.Add(MakeSectionLabel("\u7279\u6b8a 4:3", 20, 18, 180));
-            AddResolutionButton(specialCard, "1568 x 1080", null, 1568, 1080, true, 20, 54, 142);
-            AddResolutionButton(specialCard, "1280 x 882", null, 1280, 882, true, 181, 54, 142);
+            AddCommonResolutionButton(specialCard, "1568 x 1080", 1568, 1080, true, 20, 54, 142);
+            AddCommonResolutionButton(specialCard, "1280 x 882", 1280, 882, true, 181, 54, 142);
             var addCustom = MakeOutlineButton("\u6dfb\u52a0\u81ea\u5b9a\u4e49", 342, 54, 142, true);
             addCustom.Click += delegate { OpenNvidiaControlPanel(); };
             specialCard.Controls.Add(addCustom);
@@ -413,24 +452,41 @@ namespace ValorantResolutionAssistant
             var commonCard = new SoftPanel
             {
                 Location = new Point(42, 268),
-                Size = new Size(504, 110),
+                Size = new Size(504, 128),
                 Radius = 14
             };
             resolutionPage.Controls.Add(commonCard);
 
             commonCard.Controls.Add(MakeSectionLabel("\u5e38\u7528 4:3", 20, 18, 180));
-            AddResolutionButton(commonCard, "1440 x 1080", null, 1440, 1080, false, 20, 54, 142);
-            AddResolutionButton(commonCard, "1280 x 960", null, 1280, 960, false, 181, 54, 142);
-            AddResolutionButton(commonCard, "1280 x 1024", null, 1280, 1024, false, 342, 54, 142);
+            AddCommonResolutionButton(commonCard, "1440 x 1080", 1440, 1080, false, 20, 54, 142);
+            AddCommonResolutionButton(commonCard, "1280 x 960", 1280, 960, false, 181, 54, 142);
+            AddCommonResolutionButton(commonCard, "1280 x 1024", 1280, 1024, false, 342, 54, 142);
+            commonCard.Controls.Add(new Label
+            {
+                Text = "未选择时默认 1280 x 960，关闭后保存上次配置",
+                ForeColor = Theme.SecondaryText,
+                BackColor = Color.Transparent,
+                Font = smallFont,
+                Location = new Point(20, 103),
+                Size = new Size(450, 20),
+                TextAlign = ContentAlignment.MiddleLeft
+            });
+            RefreshCommonResolutionSelection();
 
-            var reset = MakeOutlineButton("\u6062\u590d\u9ed8\u8ba4", 42, 414, 180, false);
+            var reset = MakeOutlineButton("\u6062\u590d\u9ed8\u8ba4", 42, 422, 180, false);
             reset.Subtitle = null;
-            reset.Click += delegate { ResetNativeResolution(); };
+            reset.Click += delegate
+            {
+                if (ResetNativeResolution())
+                {
+                    resolutionToggle.SetChecked(false, true);
+                }
+            };
             resolutionPage.Controls.Add(reset);
 
             monitorToggle = new ToggleSwitch
             {
-                Location = new Point(354, 424),
+                Location = new Point(354, 430),
                 Size = new Size(43, 24),
                 Checked = MonitorDeviceManager.HasEnabledMonitor()
             };
@@ -442,7 +498,7 @@ namespace ValorantResolutionAssistant
                 ForeColor = Theme.PrimaryText,
                 BackColor = Theme.Background,
                 Font = uiFont,
-                Location = new Point(276, 423),
+                Location = new Point(276, 429),
                 Size = new Size(76, 26),
                 TextAlign = ContentAlignment.MiddleRight
             });
@@ -529,8 +585,8 @@ namespace ValorantResolutionAssistant
             });
 
             AddOptimizationCard(
-                "ACE \u8fdb\u7a0b",
-                "SGuard64 / SGuardSvc64 \u8bbe\u4e3a\u4f4e\u4f18\u5148\u7ea7\uff0c\u4ec5\u4f7f\u7528\u6700\u540e\u4e00\u4e2a CPU",
+                "ACE \u4f18\u5316",
+                "\u5c06 SGuard64.exe \u548c SGuardSvc64.exe \u8bbe\u4e3a\u4f4e\u4f18\u5148\u7ea7\uff0c\u5173\u8054\u6027\u4ec5\u7ed1\u5b9a\u6700\u540e\u4e00\u4e2a CPU",
                 "\u8bbe\u7f6e ACE",
                 124,
                 delegate { OptimizeAceProcesses(); });
@@ -541,8 +597,8 @@ namespace ValorantResolutionAssistant
                 208,
                 delegate { DisableMemoryIntegrity(); });
             AddOptimizationCard(
-                "ACLOS \u542f\u52a8\u5668",
-                "\u81ea\u52a8\u67e5\u627e WeGameApps \u4e2d\u7684 aclos-launcher.exe \u5e76\u7981\u7528\u5168\u5c4f\u4f18\u5316",
+                "\u7981\u7528\u5168\u5c4f\u4f18\u5316",
+                "\u5728\u542f\u52a8\u5668\u5c5e\u6027\u4e2d\u7981\u7528\u5168\u5c4f\u4f18\u5316",
                 "\u8bbe\u7f6e\u542f\u52a8\u5668",
                 292,
                 delegate { ConfigureAclosLauncher(); });
@@ -578,8 +634,8 @@ namespace ValorantResolutionAssistant
                 ForeColor = Theme.SecondaryText,
                 BackColor = Color.Transparent,
                 Font = smallFont,
-                Location = new Point(18, 37),
-                Size = new Size(304, 28)
+                Location = new Point(18, 34),
+                Size = new Size(304, 34)
             });
             var button = MakeOutlineButton(buttonText, 334, 18, 150, true);
             button.Click += handler;
@@ -741,12 +797,11 @@ namespace ValorantResolutionAssistant
             };
         }
 
-        private void AddResolutionButton(Control parent, string text, string subtitle, int width, int height, bool customMode, int left, int top, int buttonWidth)
+        private void AddCommonResolutionButton(Control parent, string text, int width, int height, bool customMode, int left, int top, int buttonWidth)
         {
             var button = new PillButton
             {
                 Text = text,
-                Subtitle = subtitle,
                 Location = new Point(left, top),
                 Size = new Size(buttonWidth, 46),
                 FillColor = Theme.ButtonBackground,
@@ -758,10 +813,57 @@ namespace ValorantResolutionAssistant
             };
             button.Click += delegate(object sender, EventArgs args)
             {
-                var target = (ResolutionTarget)((Control)sender).Tag;
-                SwitchResolution(target.Width, target.Height, target.CustomMode);
+                SelectCommonResolution((ResolutionTarget)((Control)sender).Tag);
             };
+            commonResolutionButtons.Add(button);
             parent.Controls.Add(button);
+        }
+
+        private void SelectCommonResolution(ResolutionTarget target)
+        {
+            if (resolutionToggle.Checked && !IsCurrentResolution(target))
+            {
+                if (!SwitchResolution(target.Width, target.Height, target.CustomMode))
+                {
+                    return;
+                }
+            }
+
+            selectedCommonResolution = target;
+            try
+            {
+                AppSettings.SaveCommonResolution(target);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "分辨率已切换，但保存配置失败：" + ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            RefreshCommonResolutionSelection();
+        }
+
+        private void RefreshCommonResolutionSelection()
+        {
+            foreach (var button in commonResolutionButtons)
+            {
+                var target = (ResolutionTarget)button.Tag;
+                button.Selected = target.Width == selectedCommonResolution.Width && target.Height == selectedCommonResolution.Height;
+                button.Invalidate();
+            }
+        }
+
+        private void ToggleResolutionMode()
+        {
+            var next = !resolutionToggle.Checked;
+            var succeeded = next
+                ? SwitchResolution(selectedCommonResolution.Width, selectedCommonResolution.Height, selectedCommonResolution.CustomMode)
+                : ResetNativeResolution();
+            resolutionToggle.SetChecked(succeeded ? next : resolutionToggle.Checked, true);
+        }
+
+        private bool IsCurrentResolution(ResolutionTarget target)
+        {
+            var current = DisplayApi.GetCurrentResolution();
+            return current.Width == target.Width && current.Height == target.Height;
         }
 
         private PillButton MakeOutlineButton(string text, int left, int top, int width, bool accent)
@@ -781,55 +883,44 @@ namespace ValorantResolutionAssistant
 
         private void OpenNvidiaControlPanel()
         {
-            if (TryStartProcess("explorer.exe", @"shell:AppsFolder\NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj!NVIDIACorp.NVIDIAControlPanel"))
+            if (NvidiaControlPanelLauncher.TryOpen())
             {
                 return;
             }
 
-            var installedPath = @"C:\Program Files\NVIDIA Corporation\Control Panel Client\nvcplui.exe";
-            if (TryStartProcess(installedPath) || TryStartProcess("nvcplui.exe"))
-            {
-                return;
-            }
-
-            MessageBox.Show(
+            var install = MessageBox.Show(
                 this,
-                "\u672a\u627e\u5230 NVIDIA \u63a7\u5236\u9762\u677f\uff0c\u8bf7\u624b\u52a8\u53f3\u952e\u684c\u9762\u6253\u5f00 NVIDIA \u63a7\u5236\u9762\u677f / NVIDIA App\u3002",
+                "\u672a\u627e\u5230 NVIDIA \u63a7\u5236\u9762\u677f\u3002\u662f\u5426\u6253\u5f00 Microsoft Store \u5b89\u88c5 NVIDIA Control Panel\uff1f",
                 Texts.AppName,
-                MessageBoxButtons.OK,
+                MessageBoxButtons.YesNo,
                 MessageBoxIcon.Information);
-        }
-
-        private bool TryStartProcess(string fileName)
-        {
-            try
+            if (install == DialogResult.Yes)
             {
-                Process.Start(new ProcessStartInfo(fileName)
+                try
                 {
-                    UseShellExecute = true
-                });
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool TryStartProcess(string fileName, string arguments)
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo(fileName, arguments)
+                    Process.Start(new ProcessStartInfo("ms-windows-store://pdp/?ProductId=9NF8H0H7WMLT")
+                    {
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+                catch
                 {
-                    UseShellExecute = true
-                });
-                return true;
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo("https://apps.microsoft.com/detail/9NF8H0H7WMLT")
+                        {
+                            UseShellExecute = true
+                        });
+                        return;
+                    }
+                    catch
+                    {
+                    }
+                }
             }
-            catch
-            {
-                return false;
-            }
+
+            MessageBox.Show(this, "\u65e0\u6cd5\u6253\u5f00 NVIDIA \u63a7\u5236\u9762\u677f\u6216 Microsoft Store\u3002", Texts.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OptimizeAceProcesses()
@@ -900,6 +991,19 @@ namespace ValorantResolutionAssistant
             }
         }
 
+        private void LaunchAclosLauncher()
+        {
+            try
+            {
+                var launcherPath = ValorantOptimization.LaunchAclosLauncher();
+                ShowStatus("ACLOS 启动器已打开：" + launcherPath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, Texts.ActionFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void ClearDxCache()
         {
             var cachePath = ValorantOptimization.GetDxCachePath();
@@ -920,12 +1024,13 @@ namespace ValorantResolutionAssistant
             }
         }
 
-        private void SwitchResolution(int width, int height, bool customMode)
+        private bool SwitchResolution(int width, int height, bool customMode)
         {
             try
             {
                 DisplayApi.SetResolution(width, height, 0, customMode);
                 UpdateStatus();
+                return true;
             }
             catch (UnsupportedResolutionException ex)
             {
@@ -935,20 +1040,23 @@ namespace ValorantResolutionAssistant
             {
                 MessageBox.Show(this, ex.Message, Texts.SwitchFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return false;
         }
 
-        private void ResetNativeResolution()
+        private bool ResetNativeResolution()
         {
             try
             {
                 var mode = DisplayApi.GetBestNativeResolution();
                 DisplayApi.SetResolution(mode.Width, mode.Height, mode.Frequency, false);
                 UpdateStatus();
+                return true;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, ex.Message, Texts.SwitchFailed, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            return false;
         }
 
         private void ToggleMonitor()
@@ -1232,6 +1340,7 @@ namespace ValorantResolutionAssistant
         public Color BorderColor { get; set; }
         public Color TextColor { get; set; }
         public int Radius { get; set; }
+        public bool Selected { get; set; }
 
         public PillButton()
         {
@@ -1281,7 +1390,7 @@ namespace ValorantResolutionAssistant
             var fill = pressed ? Blend(FillColor, Color.Black, 0.04f) : hovering ? Blend(FillColor, Color.Black, 0.02f) : FillColor;
             using (var path = Drawing.RoundRect(new Rectangle(0, 0, Width - 1, Height - 1), Radius))
             using (var brush = new SolidBrush(fill))
-            using (var pen = new Pen(BorderColor, 1f))
+            using (var pen = new Pen(Selected ? Theme.Accent : BorderColor, Selected ? 1.4f : 1f))
             using (var textBrush = new SolidBrush(TextColor))
             using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = string.IsNullOrEmpty(Subtitle) ? StringAlignment.Center : StringAlignment.Near })
             {
@@ -1301,6 +1410,25 @@ namespace ValorantResolutionAssistant
                     {
                         e.Graphics.DrawString(Text, Font, textBrush, titleRect, center);
                         e.Graphics.DrawString(Subtitle, subtitleFont, subtitleBrush, subtitleRect, center);
+                    }
+                }
+
+                if (Selected)
+                {
+                    var badgeRect = new RectangleF(Width - 22f, 3f, 18f, 18f);
+                    using (var badgeBrush = new SolidBrush(Theme.Accent))
+                    using (var checkPen = new Pen(Color.White, 2f))
+                    {
+                        checkPen.StartCap = LineCap.Round;
+                        checkPen.EndCap = LineCap.Round;
+                        checkPen.LineJoin = LineJoin.Round;
+                        e.Graphics.FillEllipse(badgeBrush, badgeRect);
+                        e.Graphics.DrawLines(checkPen, new[]
+                        {
+                            new PointF(badgeRect.Left + 4.5f, badgeRect.Top + 9.3f),
+                            new PointF(badgeRect.Left + 7.8f, badgeRect.Top + 12.3f),
+                            new PointF(badgeRect.Left + 13.7f, badgeRect.Top + 5.8f)
+                        });
                     }
                 }
             }
@@ -1444,6 +1572,70 @@ namespace ValorantResolutionAssistant
         }
     }
 
+    internal static class AppSettings
+    {
+        private const string RegistryPath = @"Software\ValoToolkit";
+        private const string WidthValue = "CommonResolutionWidth";
+        private const string HeightValue = "CommonResolutionHeight";
+
+        public static ResolutionTarget LoadCommonResolution()
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.OpenSubKey(RegistryPath))
+                {
+                    if (key != null)
+                    {
+                        var width = Convert.ToInt32(key.GetValue(WidthValue, 1280));
+                        var height = Convert.ToInt32(key.GetValue(HeightValue, 960));
+                        if (IsAllowed(width, height))
+                        {
+                            return new ResolutionTarget(width, height, IsSpecial(width, height));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return new ResolutionTarget(1280, 960, false);
+        }
+
+        public static void SaveCommonResolution(ResolutionTarget target)
+        {
+            if (!IsAllowed(target.Width, target.Height))
+            {
+                throw new ArgumentException("不支持的常用 4:3 分辨率。", "target");
+            }
+
+            using (var key = Registry.CurrentUser.CreateSubKey(RegistryPath))
+            {
+                if (key == null)
+                {
+                    throw new InvalidOperationException("无法保存分辨率配置。");
+                }
+
+                key.SetValue(WidthValue, target.Width, RegistryValueKind.DWord);
+                key.SetValue(HeightValue, target.Height, RegistryValueKind.DWord);
+            }
+        }
+
+        private static bool IsAllowed(int width, int height)
+        {
+            return IsSpecial(width, height) ||
+                (width == 1440 && height == 1080) ||
+                (width == 1280 && height == 960) ||
+                (width == 1280 && height == 1024);
+        }
+
+        private static bool IsSpecial(int width, int height)
+        {
+            return (width == 1568 && height == 1080) ||
+                (width == 1280 && height == 882);
+        }
+    }
+
     internal sealed class UnsupportedResolutionException : Exception
     {
         public UnsupportedResolutionException(string message) : base(message)
@@ -1558,8 +1750,25 @@ namespace ValorantResolutionAssistant
             return launcherPath;
         }
 
-        private static string FindAclosLauncher()
+        public static string LaunchAclosLauncher()
         {
+            var launcherPath = FindAclosLauncher();
+            if (launcherPath == null)
+            {
+                throw new System.IO.FileNotFoundException("\u672a\u5728\u5404\u78c1\u76d8\u7684 WeGameApps\\rail_apps \u4e2d\u627e\u5230 aclos-launcher.exe\u3002");
+            }
+
+            Process.Start(new ProcessStartInfo(launcherPath)
+            {
+                UseShellExecute = true,
+                WorkingDirectory = System.IO.Path.GetDirectoryName(launcherPath)
+            });
+            return launcherPath;
+        }
+
+        public static string FindAclosLauncher()
+        {
+            var candidates = new List<string>();
             foreach (var drive in System.IO.DriveInfo.GetDrives())
             {
                 if (!drive.IsReady || drive.DriveType != System.IO.DriveType.Fixed)
@@ -1580,7 +1789,7 @@ namespace ValorantResolutionAssistant
                         var launcherPath = System.IO.Path.Combine(gamePath, "ACLOS", "aclos-launcher.exe");
                         if (System.IO.File.Exists(launcherPath))
                         {
-                            return launcherPath;
+                            candidates.Add(launcherPath);
                         }
                     }
                 }
@@ -1592,7 +1801,18 @@ namespace ValorantResolutionAssistant
                 }
             }
 
-            return null;
+            candidates.Sort(delegate(string left, string right)
+            {
+                var leftPreferred = left.IndexOf("\u65e0\u754f\u5951\u7ea6", StringComparison.OrdinalIgnoreCase) >= 0;
+                var rightPreferred = right.IndexOf("\u65e0\u754f\u5951\u7ea6", StringComparison.OrdinalIgnoreCase) >= 0;
+                if (leftPreferred != rightPreferred)
+                {
+                    return leftPreferred ? -1 : 1;
+                }
+
+                return StringComparer.OrdinalIgnoreCase.Compare(left, right);
+            });
+            return candidates.Count == 0 ? null : candidates[0];
         }
 
         public static string GetDxCachePath()
@@ -1612,6 +1832,178 @@ namespace ValorantResolutionAssistant
 
             System.IO.Directory.Delete(cachePath, true);
             return "\u5df2\u5220\u9664 DXCache\uff1a\r\n" + cachePath;
+        }
+    }
+
+    internal static class NvidiaControlPanelLauncher
+    {
+        private const string StorePackageFamily = "NVIDIACorp.NVIDIAControlPanel_56jybvy8sckqj";
+        private const string StoreAumid = "NVIDIACorp.NVIDIAControlPanel";
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        private static extern int GetPackagesByPackageFamily(
+            string packageFamilyName,
+            ref uint count,
+            IntPtr packageFullNames,
+            ref uint bufferLength,
+            IntPtr buffer);
+
+        public static bool TryOpen()
+        {
+            var classicPath = FindClassicExecutable();
+            if (classicPath != null && TryStart(classicPath, null))
+            {
+                return true;
+            }
+
+            if (IsStorePackageInstalled() && TryStart("explorer.exe", @"shell:AppsFolder\" + StorePackageFamily + "!" + StoreAumid))
+            {
+                return true;
+            }
+
+            return HasControlPanelApplet() && TryStart("control.exe", "/name NVIDIA.Display");
+        }
+
+        private static string FindClassicExecutable()
+        {
+            var registryViews = new[] { RegistryView.Registry64, RegistryView.Registry32 };
+            var hives = new[] { RegistryHive.CurrentUser, RegistryHive.LocalMachine };
+            foreach (var hive in hives)
+            {
+                foreach (var view in registryViews)
+                {
+                    var path = TryGetAppPath(hive, view);
+                    if (path != null && System.IO.File.Exists(path))
+                    {
+                        return path;
+                    }
+                }
+            }
+
+            var programFiles = new[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            };
+            foreach (var root in programFiles)
+            {
+                if (string.IsNullOrWhiteSpace(root))
+                {
+                    continue;
+                }
+
+                var path = System.IO.Path.Combine(root, "NVIDIA Corporation", "Control Panel Client", "nvcplui.exe");
+                if (System.IO.File.Exists(path))
+                {
+                    return path;
+                }
+            }
+
+            var pathValue = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrWhiteSpace(pathValue))
+            {
+                foreach (var directory in pathValue.Split(';'))
+                {
+                    if (string.IsNullOrWhiteSpace(directory))
+                    {
+                        continue;
+                    }
+
+                    var path = System.IO.Path.Combine(directory.Trim(), "nvcplui.exe");
+                    if (System.IO.File.Exists(path))
+                    {
+                        return path;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static string TryGetAppPath(RegistryHive hive, RegistryView view)
+        {
+            try
+            {
+                using (var baseKey = RegistryKey.OpenBaseKey(hive, view))
+                using (var appPath = baseKey.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\App Paths\nvcplui.exe"))
+                {
+                    if (appPath == null)
+                    {
+                        return null;
+                    }
+
+                    var value = Convert.ToString(appPath.GetValue(null, null));
+                    return string.IsNullOrWhiteSpace(value) ? null : value.Trim().Trim('"');
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static bool IsStorePackageInstalled()
+        {
+            try
+            {
+                uint count = 0;
+                uint bufferLength = 0;
+                var result = GetPackagesByPackageFamily(StorePackageFamily, ref count, IntPtr.Zero, ref bufferLength, IntPtr.Zero);
+                return count > 0 && (result == 0 || result == 122);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool HasControlPanelApplet()
+        {
+            var registryViews = new[] { RegistryView.Registry64, RegistryView.Registry32 };
+            foreach (var view in registryViews)
+            {
+                try
+                {
+                    using (var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
+                    using (var cpls = baseKey.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Control Panel\Cpls"))
+                    {
+                        if (cpls == null)
+                        {
+                            continue;
+                        }
+
+                        foreach (var valueName in cpls.GetValueNames())
+                        {
+                            if (valueName.IndexOf("nvcpl", StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryStart(string fileName, string arguments)
+        {
+            try
+            {
+                var startInfo = string.IsNullOrEmpty(arguments)
+                    ? new ProcessStartInfo(fileName)
+                    : new ProcessStartInfo(fileName, arguments);
+                startInfo.UseShellExecute = true;
+                Process.Start(startInfo);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 
@@ -1738,6 +2130,7 @@ namespace ValorantResolutionAssistant
 
     internal static class DisplayApi
     {
+        private const int ENUM_CURRENT_SETTINGS = -1;
         private const int CDS_UPDATEREGISTRY = 0x00000001;
         private const int CDS_TEST = 0x00000002;
         private const int DISP_CHANGE_SUCCESSFUL = 0;
@@ -1813,6 +2206,17 @@ namespace ValorantResolutionAssistant
 
         [DllImport("user32.dll", CharSet = CharSet.Ansi)]
         private static extern int ChangeDisplaySettingsEx(string deviceName, ref DEVMODE devMode, IntPtr hwnd, int flags, IntPtr lParam);
+
+        public static DisplayMode GetCurrentResolution()
+        {
+            var mode = NewDevMode();
+            if (!EnumDisplaySettings(GetPrimaryDisplayName(), ENUM_CURRENT_SETTINGS, ref mode))
+            {
+                throw new InvalidOperationException("无法读取当前主显示器分辨率。");
+            }
+
+            return new DisplayMode(mode.dmPelsWidth, mode.dmPelsHeight, mode.dmDisplayFrequency);
+        }
 
         public static DisplayMode GetBestNativeResolution()
         {
